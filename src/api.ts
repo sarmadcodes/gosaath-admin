@@ -13,7 +13,7 @@
  *   around invites somebody to try.
  */
 
-const BASE = `${(import.meta.env["VITE_API_URL"] ?? "http://localhost:4000").replace(/\/$/, "")}/api/v1`;
+export const BASE = `${(import.meta.env["VITE_API_URL"] ?? "http://localhost:4000").replace(/\/$/, "")}/api/v1`;
 const SESSION_KEY = "gosaath.admin.session";
 
 export class ApiError extends Error {
@@ -87,7 +87,13 @@ async function send<T>(
   return json.data as T;
 }
 
-async function currentAccessToken(): Promise<string> {
+/**
+ * Exported for the live event stream, which authenticates with the same token
+ * and must share this single-flight refresh: two refreshes racing would have
+ * one rotate the refresh token out from under the other, which the server
+ * correctly reads as token theft and answers by revoking the session.
+ */
+export async function currentAccessToken(): Promise<string> {
   if (accessToken && Date.now() < accessExpiresAt) return accessToken;
   if (!refreshToken) throw new ApiError("Sign in to continue.", 401);
 
@@ -296,16 +302,32 @@ export const REJECTION_REASONS = [
 // ---------------------------------------------------------------------------
 
 export const api = {
-  async signIn(email: string, password: string): Promise<AdminMe> {
-    const session = await send<{ token: string }>("POST", "/auth/login", {
-      email,
-      password,
+  /**
+   * Step one: ask for a code.
+   *
+   * Always succeeds, whoever the address belongs to. The server will not say
+   * whether it is an administrator, because an endpoint that did would be a
+   * way to find out which three people are worth phishing — so the panel
+   * cannot say either, and its copy is written to be honest about that.
+   */
+  async requestCode(email: string): Promise<void> {
+    await send("POST", "/admin/auth/code", { email: email.trim().toLowerCase() });
+  },
+
+  /**
+   * Step two: spend the code.
+   *
+   * The role comes from the server, never from what the panel hoped: an
+   * account without admin access gets 403 here and is told plainly, rather
+   * than being shown a shell full of failing requests.
+   */
+  async signInWithCode(email: string, code: string): Promise<AdminMe> {
+    const session = await send<{ token: string }>("POST", "/admin/auth/verify", {
+      email: email.trim().toLowerCase(),
+      code,
     });
     setSession(session.token);
     try {
-      // Role comes from the server, never from what the panel hoped: a member
-      // signing in here gets 403 and is told plainly, rather than being shown
-      // an admin shell full of failing requests.
       return await authed<AdminMe>("GET", "/admin/me");
     } catch (error) {
       setSession(null);

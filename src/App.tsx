@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { api, isSignedIn, type AdminMe } from "./api";
+import { startAdminRealtime, stopAdminRealtime } from "./realtime";
 import { Shell } from "./Shell";
 import { Skeleton, ToastProvider, TooltipProvider } from "./design/ui";
 import { SignIn } from "./pages/SignIn";
@@ -45,6 +46,15 @@ export function App() {
       })
       .finally(() => setChecking(false));
   }, []);
+
+  // The live stream follows the session rather than any one screen, so there
+  // is no path to a signed-in console with no stream — or a signed-out one
+  // still holding a connection to an institution it may no longer administer.
+  useEffect(() => {
+    if (admin) startAdminRealtime();
+    else stopAdminRealtime();
+    return () => stopAdminRealtime();
+  }, [admin]);
 
   return (
     <TooltipProvider delayDuration={300}>

@@ -22,6 +22,17 @@ type Entry = { value: unknown; at: number; inflight?: Promise<unknown> };
 const cache = new Map<string, Entry>();
 const listeners = new Map<string, Set<() => void>>();
 
+/**
+ * Refetchers for the queries currently on screen.
+ *
+ * `invalidate` is right when a value is known to be wrong and nobody is
+ * looking; a live event is the opposite case — something changed and somebody
+ * IS looking, so the cache entry must be replaced rather than emptied.
+ * Clearing it instead would blank the list and then fill it, which is a worse
+ * answer than the stale row it replaced.
+ */
+const refetchers = new Map<string, Set<() => void>>();
+
 /** How long a cached value is served before a refetch is triggered behind it. */
 const STALE_MS = 30_000;
 
@@ -65,6 +76,23 @@ async function load<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   return inflight;
 }
 
+/**
+ * Quietly refreshes every mounted query whose key starts with `prefix`.
+ *
+ * Called when the server says something changed. Silent: what is on screen
+ * stays there and is swapped when the new data lands, so a verification queue
+ * updating under an administrator's cursor never flashes a skeleton.
+ */
+export function refetchMatching(prefix: string) {
+  for (const [key, set] of refetchers) {
+    if (!key.startsWith(prefix)) continue;
+    // Dropped so the refetch actually goes to the server rather than being
+    // served the value that just became wrong.
+    cache.delete(key);
+    set.forEach((refetch) => refetch());
+  }
+}
+
 export function useQuery<T>(key: string, fetcher: () => Promise<T>) {
   const cached = cache.get(key);
   const [value, setValue] = useState<T | undefined>(cached?.value as T | undefined);
@@ -104,6 +132,14 @@ export function useQuery<T>(key: string, fetcher: () => Promise<T>) {
     }
     set.add(listener);
 
+    const refetch = () => void run(true);
+    let live = refetchers.get(key);
+    if (!live) {
+      live = new Set();
+      refetchers.set(key, live);
+    }
+    live.add(refetch);
+
     const entry = cache.get(key);
     const fresh = entry && entry.value !== undefined && Date.now() - entry.at < STALE_MS;
     if (entry?.value !== undefined) {
@@ -116,6 +152,8 @@ export function useQuery<T>(key: string, fetcher: () => Promise<T>) {
     return () => {
       set!.delete(listener);
       if (set!.size === 0) listeners.delete(key);
+      live!.delete(refetch);
+      if (live!.size === 0) refetchers.delete(key);
     };
   }, [key, run]);
 
