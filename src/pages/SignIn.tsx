@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Box, Button, Callout, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
-import { WarningIcon } from "@phosphor-icons/react";
 import { api, type AdminMe } from "../api";
+import { Button, Field, InlineError, Input } from "../design/ui";
 
 /**
  * Sign in.
  *
- * The same credentials as the app: an admin is a member with a role, not a
- * separate account. The panel never decides who is an admin. It asks the
- * server and believes the answer.
+ * The same credentials as the app: an administrator is a member with a role,
+ * not a separate kind of account. The panel never decides who is an admin.
+ * It asks the server and believes the answer.
  */
 export function SignIn({ onSignedIn }: { onSignedIn: (admin: AdminMe) => void }) {
   const [email, setEmail] = useState("");
@@ -30,64 +29,69 @@ export function SignIn({ onSignedIn }: { onSignedIn: (admin: AdminMe) => void })
   }
 
   return (
-    <Flex align="center" justify="center" px="4" style={{ minHeight: "100dvh" }}>
-      <Box width="100%" style={{ maxWidth: 380 }}>
-        <Heading size="6" mb="1">
-          GoSaath Admin
-        </Heading>
-        <Text size="2" color="gray" as="p" mb="5">
-          Sign in with your institution account.
-        </Text>
+    <div
+      style={{
+        minHeight: "100dvh",
+        display: "grid",
+        placeItems: "center",
+        padding: "var(--space-4)",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 360 }}>
+        <div className="row gap-3" style={{ marginBottom: "var(--space-6)" }}>
+          <svg width="34" height="34" viewBox="0 0 26 26" fill="none" aria-hidden>
+            <rect width="26" height="26" rx="8" fill="var(--brand)" />
+            <path
+              d="M7 17.5c2.2 0 2.2-9 4.5-9s2.3 9 4.5 9"
+              stroke="var(--on-brand)"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+            />
+            <circle cx="18.6" cy="9.4" r="1.7" fill="var(--on-brand)" />
+          </svg>
+          <div>
+            <h1 className="h1" style={{ fontSize: 19 }}>
+              GoSaath Admin
+            </h1>
+            <p className="caption t-3">Manage commuting at your institution</p>
+          </div>
+        </div>
 
-        <Card size="3">
-          <form onSubmit={submit}>
-            <Flex direction="column" gap="4">
-              <Box>
-                <Text as="label" size="2" weight="medium" htmlFor="email">
-                  Email
-                </Text>
-                <TextField.Root
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  mt="1"
-                />
-              </Box>
+        <form onSubmit={submit} className="card card-pad stack gap-4">
+          <Field label="Email" htmlFor="email">
+            <Input
+              id="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+          </Field>
 
-              <Box>
-                <Text as="label" size="2" weight="medium" htmlFor="password">
-                  Password
-                </Text>
-                <TextField.Root
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  mt="1"
-                />
-              </Box>
+          <Field label="Password" htmlFor="password">
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </Field>
 
-              {error ? (
-                <Callout.Root color="red" size="1" role="alert">
-                  <Callout.Icon>
-                    <WarningIcon size={15} />
-                  </Callout.Icon>
-                  <Callout.Text>{error}</Callout.Text>
-                </Callout.Root>
-              ) : null}
+          {error ? <InlineError message={error} /> : null}
 
-              <Button type="submit" loading={busy} disabled={!email || !password}>
-                Sign in
-              </Button>
-            </Flex>
-          </form>
-        </Card>
-      </Box>
-    </Flex>
+          <Button type="submit" variant="primary" loading={busy} disabled={!email || !password}>
+            Sign in
+          </Button>
+        </form>
+
+        <p className="caption t-3" style={{ marginTop: "var(--space-4)", textAlign: "center" }}>
+          Use your institution account. Access is granted by the GoSaath team.
+        </p>
+      </div>
+    </div>
   );
 }
