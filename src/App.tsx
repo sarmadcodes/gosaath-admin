@@ -1,33 +1,27 @@
-import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { Box, Button, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import {
-  BuildingsIcon,
-  ChartBarIcon,
-  SealCheckIcon,
-  SignOutIcon,
-  UsersIcon,
-  WarningIcon,
-} from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { api, isSignedIn, type AdminMe } from "./api";
+import { Shell } from "./Shell";
+import { Skeleton, ToastProvider, TooltipProvider } from "./design/ui";
 import { SignIn } from "./pages/SignIn";
-import { Dashboard } from "./pages/Dashboard";
-import { Verifications } from "./pages/Verifications";
-import { Members } from "./pages/Members";
-import { MemberPage } from "./pages/MemberPage";
-import { Reports } from "./pages/Reports";
+import { Overview } from "./pages/Overview";
+import { Verification } from "./pages/Verification";
+import { People } from "./pages/People";
+import { PersonPage } from "./pages/PersonPage";
+import { Moderation } from "./pages/Moderation";
 import { Campuses } from "./pages/Campuses";
 
 /**
- * The panel shell.
+ * The panel.
  *
- * The role is read from the server on every load rather than from anything
- * stored here, so an admin whose access was removed sees it on the next load
- * instead of operating a panel that only fails when they try to act.
+ * Who the admin is, and what they may see, is read from the server on every
+ * load rather than from anything kept here. An administrator whose access
+ * was removed finds out on their next load, instead of operating a console
+ * that only fails when they try to act.
  */
 export function App() {
   const [admin, setAdmin] = useState<AdminMe | null>(null);
-  const [loading, setLoading] = useState(isSignedIn());
+  const [checking, setChecking] = useState(isSignedIn());
 
   useEffect(() => {
     if (!isSignedIn()) return;
@@ -38,107 +32,60 @@ export function App() {
         api.signOut();
         setAdmin(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => setChecking(false));
   }, []);
 
-  if (loading) {
-    return (
-      <Flex align="center" justify="center" style={{ minHeight: "100dvh" }}>
-        <Spinner size="3" />
-      </Flex>
-    );
-  }
-
-  if (!admin) return <SignIn onSignedIn={setAdmin} />;
-
-  return <Shell admin={admin} onSignedOut={() => setAdmin(null)} />;
+  return (
+    <TooltipProvider delayDuration={300}>
+      <ToastProvider>
+        {checking ? (
+          <BootSkeleton />
+        ) : !admin ? (
+          <SignIn onSignedIn={setAdmin} />
+        ) : (
+          <Shell admin={admin} onSignedOut={() => setAdmin(null)}>
+            <Routes>
+              <Route path="/" element={<Overview admin={admin} />} />
+              <Route path="/verifications" element={<Verification />} />
+              <Route path="/members" element={<People />} />
+              <Route path="/members/:id" element={<PersonPage />} />
+              <Route path="/reports" element={<Moderation />} />
+              <Route path="/campuses" element={<Campuses />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Shell>
+        )}
+      </ToastProvider>
+    </TooltipProvider>
+  );
 }
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: ChartBarIcon, end: true },
-  { to: "/verifications", label: "Verification", icon: SealCheckIcon, end: false },
-  { to: "/members", label: "Members", icon: UsersIcon, end: false },
-  { to: "/reports", label: "Reports", icon: WarningIcon, end: false },
-  { to: "/campuses", label: "Campuses", icon: BuildingsIcon, end: false },
-];
-
-function Shell({ admin, onSignedOut }: { admin: AdminMe; onSignedOut: () => void }) {
-  const navigate = useNavigate();
-
-  const signOut = useCallback(() => {
-    api.signOut();
-    onSignedOut();
-    navigate("/");
-  }, [navigate, onSignedOut]);
-
+/**
+ * The first moment, before we know whether there is a session.
+ *
+ * Shaped like the shell that is about to appear rather than a spinner in the
+ * middle of an empty page, so the console does not visibly assemble itself.
+ */
+function BootSkeleton() {
   return (
-    <Flex style={{ minHeight: "100dvh" }}>
-      <Box
-        style={{
-          width: 232,
-          flexShrink: 0,
-          borderRight: "1px solid var(--gray-a5)",
-          padding: "var(--space-4)",
-          position: "sticky",
-          top: 0,
-          height: "100dvh",
-        }}
-      >
-        <Flex direction="column" justify="between" height="100%">
-          <Box>
-            <Heading size="4" mb="1">
-              GoSaath
-            </Heading>
-            <Text size="1" color="gray">
-              {admin.scope.kind === "platform" ? "Platform admin" : "University admin"}
-            </Text>
-
-            <Flex direction="column" gap="1" mt="5" asChild>
-              <nav>
-                {NAV.map(({ to, label, icon: Icon, end }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={end}
-                    style={({ isActive }) => ({
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-2)",
-                      padding: "var(--space-2) var(--space-3)",
-                      borderRadius: "var(--radius-3)",
-                      textDecoration: "none",
-                      color: isActive ? "var(--accent-11)" : "var(--gray-12)",
-                      background: isActive ? "var(--accent-3)" : "transparent",
-                      fontSize: "var(--font-size-2)",
-                      fontWeight: isActive ? 500 : 400,
-                    })}
-                  >
-                    <Icon size={17} weight={"regular"} />
-                    {label}
-                  </NavLink>
-                ))}
-              </nav>
-            </Flex>
-          </Box>
-
-          <Button variant="soft" color="gray" onClick={signOut}>
-            <SignOutIcon size={16} />
-            Sign out
-          </Button>
-        </Flex>
-      </Box>
-
-      <Box flexGrow="1" p="6" style={{ maxWidth: 1180 }}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/verifications" element={<Verifications />} />
-          <Route path="/members" element={<Members />} />
-          <Route path="/members/:id" element={<MemberPage />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/campuses" element={<Campuses />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Box>
-    </Flex>
+    <div className="shell" data-collapsed="false">
+      <aside className="sidebar">
+        <Skeleton width={120} height={26} radius="var(--radius-md)" />
+        <div className="stack gap-2" style={{ marginTop: "var(--space-6)" }}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton key={index} height={30} radius="var(--radius-md)" />
+          ))}
+        </div>
+      </aside>
+      <div>
+        <div className="topbar">
+          <Skeleton width={140} height={20} />
+        </div>
+        <div className="page stack gap-4">
+          <Skeleton width={220} height={30} />
+          <Skeleton height={120} radius="var(--radius-lg)" />
+        </div>
+      </div>
+    </div>
   );
 }

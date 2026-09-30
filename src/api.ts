@@ -137,6 +137,10 @@ export type AdminMe = {
   userId: string;
   role: "member" | "universityAdmin" | "superAdmin";
   scope: { kind: "institution"; institutionId: string } | { kind: "platform" };
+  /** Who the panel says you are, read from the server on every load. */
+  name: string;
+  email: string;
+  institutionName: string;
 };
 
 export type Overview = {
@@ -183,6 +187,22 @@ export type Verification = {
   campusName: string;
   documentUrl: string | null;
   requestedAt: string | null;
+};
+
+export type Activity = {
+  id: string;
+  action: string;
+  actorName: string;
+  targetType: string;
+  targetId: string | null;
+  at: string;
+};
+
+export type Institution = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  brandColor: string;
 };
 
 export type Report = {
@@ -274,6 +294,8 @@ export const api = {
       action,
       ...(note ? { note } : {}),
     }),
+
+  activity: () => authed<Activity[]>("GET", "/admin/activity"),
 
   campuses: () => authed<Campus[]>("GET", "/admin/campuses"),
 
