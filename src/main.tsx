@@ -1,24 +1,24 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { Theme } from "@radix-ui/themes";
-import "@radix-ui/themes/styles.css";
-import "./app.css";
+
+// Self-hosted, and only the weights the design system actually uses. The app
+// pairs Manrope for headings with Inter for everything else; the console does
+// the same, because they are one product.
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+
+import "./design/tokens.css";
+import "./design/base.css";
 import { App } from "./App";
 
-/**
- * Radix Themes, set once at the root.
- *
- * Teal matches the GoSaath app's accent, and the panel follows the operator's
- * own system preference: this is a tool somebody sits in front of for an hour
- * at a time, not a page they glance at.
- */
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Theme accentColor="teal" grayColor="slate" radius="medium" appearance="inherit">
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </Theme>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>,
 );

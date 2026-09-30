@@ -1,0 +1,159 @@
+/*
+ * GoSaath Admin design tokens.
+ *
+ * Lifted directly from the mobile app's palette and scale
+ * (GoSaath/src/theme/palette.ts and tokens.ts) so the two products are
+ * genuinely the same design system rather than two things that happen to
+ * share a colour. Where the app has a value, this file has the same value.
+ *
+ * The rules that carry over unchanged:
+ *   - Elevation is a hairline border against the page, never a shadow. That
+ *     is what keeps a long list of members calm rather than busy.
+ *   - Radius is documented and absolute: inputs and small controls sm,
+ *     buttons and badges md, cards lg, dialogs xl, avatars and pills full.
+ *   - Weight is used sparingly. Emphasis is colour, not bold.
+ *   - Manrope for headings, Inter for everything else.
+ *
+ * What the admin adds, because a desktop console needs it and a phone does
+ * not: a denser row rhythm, a sidebar surface, and a focus ring that has to
+ * survive keyboard-only operation all day.
+ */
+
+:root {
+  /* Surfaces */
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f1f1ee;
+  --surface-sunken: #eeeeea;
+  --skeleton-base: #ececeA;
+  --skeleton-highlight: #fafaf8;
+
+  /* Text */
+  --text: #14171a;
+  --text-2: #5b6168;
+  --text-3: #8b9096;
+
+  --border: #e4e4e0;
+  /* A second, softer hairline for dividers inside a card, so a table does
+     not read as a grid of boxes. */
+  --border-soft: #eeeeeb;
+
+  /* Brand */
+  --brand: #0f6e5c;
+  --brand-hover: #0c5a4b;
+  --brand-soft: #e4f1ee;
+  --brand-border: #cfe4de;
+  --on-brand: #ffffff;
+
+  /* Status, same semantics as the app */
+  --success: #1e8e5a;
+  --success-bg: #e7f4ec;
+  --warning: #b7791f;
+  --warning-bg: #fbf0de;
+  --danger: #c0392b;
+  --danger-bg: #fbeae8;
+  --info: #2e6fb0;
+  --info-bg: #e8f0f8;
+
+  --overlay: rgb(20 23 26 / 0.45);
+
+  /* Spacing, the app's scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius, the app's documented rule */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* One duration scale. Everything is quick: this is a tool somebody uses
+     for an hour, and motion that is admired once is motion that irritates
+     the hundredth time. */
+  --fast: 120ms;
+  --normal: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0.13, 1);
+
+  --sidebar-width: 244px;
+  --sidebar-collapsed: 68px;
+  --topbar-height: 60px;
+}
+
+:root[data-theme="dark"] {
+  --bg: #101312;
+  --surface: #181c1b;
+  --surface-2: #1f2423;
+  --surface-sunken: #0c0f0e;
+  --skeleton-base: #212725;
+  --skeleton-highlight: #2c3331;
+
+  --text: #f2f3f2;
+  --text-2: #a3aaa7;
+  --text-3: #737b78;
+
+  --border: #2a302e;
+  --border-soft: #232826;
+
+  --brand: #2e9c86;
+  --brand-hover: #3bb69d;
+  --brand-soft: #16302b;
+  --brand-border: #23463f;
+  --on-brand: #ffffff;
+
+  --success: #3fb37a;
+  --success-bg: #122a1f;
+  --warning: #d9a441;
+  --warning-bg: #2e2417;
+  --danger: #e06a5c;
+  --danger-bg: #301d1b;
+  --info: #5a9bd8;
+  --info-bg: #16242f;
+
+  --overlay: rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101312;
+    --surface: #181c1b;
+    --surface-2: #1f2423;
+    --surface-sunken: #0c0f0e;
+    --skeleton-base: #212725;
+    --skeleton-highlight: #2c3331;
+
+    --text: #f2f3f2;
+    --text-2: #a3aaa7;
+    --text-3: #737b78;
+
+    --border: #2a302e;
+    --border-soft: #232826;
+
+    --brand: #2e9c86;
+    --brand-hover: #3bb69d;
+    --brand-soft: #16302b;
+    --brand-border: #23463f;
+    --on-brand: #ffffff;
+
+    --success: #3fb37a;
+    --success-bg: #122a1f;
+    --warning: #d9a441;
+    --warning-bg: #2e2417;
+    --danger: #e06a5c;
+    --danger-bg: #301d1b;
+    --info: #5a9bd8;
+    --info-bg: #16242f;
+
+    --overlay: rgb(0 0 0 / 0.6);
+  }
+}
