@@ -160,6 +160,8 @@ export type Member = {
   name: string;
   email: string;
   userType: string;
+  institutionId: string;
+  institutionName: string;
   campusName: string;
   areaName: string;
   badgeStatus: "none" | "pending" | "approved" | "rejected";
@@ -187,6 +189,64 @@ export type Verification = {
   campusName: string;
   documentUrl: string | null;
   requestedAt: string | null;
+};
+
+export type PlatformOverview = {
+  institutions: number;
+  liveInstitutions: number;
+  members: number;
+  newMembersThisWeek: number;
+  activeCommutes: number;
+  escalatedReports: number;
+  /** A count, not a list. */
+  pendingInstitutionRequests: number;
+  signupsThisWeek: Array<{ institution: string; count: number }>;
+  quietInstitutions: string[];
+};
+
+export type InstitutionRow = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  type: string;
+  city: string;
+  active: boolean;
+  members: number;
+  campuses: number;
+  createdAt: string;
+};
+
+export type AdminRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  institutionName: string;
+  suspended: boolean;
+};
+
+export type AuditEntry = {
+  id: string;
+  actorUserId: string;
+  actorRole: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  institutionId: string | null;
+  createdAt: string;
+};
+
+export type Analytics = {
+  days: number;
+  signups: Array<{ date: string; count: number }>;
+  commutes: Array<{ date: string; count: number }>;
+  verification: { pending: number; approved: number; rejected: number };
+  totals: {
+    members: number;
+    activeCommutes: number;
+    offeringSeats: number;
+    lookingForRides: number;
+  };
 };
 
 export type Activity = {
@@ -266,8 +326,21 @@ export const api = {
 
   overview: () => authed<Overview>("GET", "/admin/overview"),
 
-  members: (params: { q?: string; badgeStatus?: string; before?: string; limit?: number }) =>
-    authed<Member[]>("GET", `/admin/members${qs({ ...params, limit: params.limit ?? 25 })}`),
+  /**
+   * One page of members, straight from the server.
+   *
+   * Cursor paged on `before`, never "fetch everything and slice": at a
+   * hundred thousand accounts the difference is the browser falling over.
+   */
+  members: (params: {
+    q?: string;
+    badgeStatus?: string;
+    institutionId?: string;
+    campusId?: string;
+    suspended?: string;
+    before?: string;
+    limit?: number;
+  }) => authed<Member[]>("GET", `/admin/members${qs({ ...params, limit: params.limit ?? 30 })}`),
 
   member: (id: string) => authed<MemberDetail>("GET", `/admin/members/${id}`),
 
@@ -297,7 +370,32 @@ export const api = {
 
   activity: () => authed<Activity[]>("GET", "/admin/activity"),
 
-  campuses: () => authed<Campus[]>("GET", "/admin/campuses"),
+  analytics: (days: number, institutionId?: string) =>
+    authed<Analytics>("GET", `/admin/analytics${qs({ days, institutionId })}`),
+
+  campuses: (institutionId?: string) =>
+    authed<Campus[]>("GET", `/admin/campuses${qs({ institutionId })}`),
+
+  // --- Platform scope. Every one of these is refused for an institution
+  // admin by the server, not by hiding a link. ---
+
+  platformOverview: () => authed<PlatformOverview>("GET", "/admin/platform/overview"),
+
+  institutions: (params: { q?: string; active?: string } = {}) =>
+    authed<InstitutionRow[]>("GET", `/admin/institutions${qs(params)}`),
+
+  institution: (id: string) => authed<unknown>("GET", `/admin/institutions/${id}`),
+
+  activateInstitution: (id: string, password: string) =>
+    authed<unknown>("POST", `/admin/institutions/${id}/activate`, { password }),
+
+  deactivateInstitution: (id: string, password: string, reason: string) =>
+    authed<unknown>("POST", `/admin/institutions/${id}/deactivate`, { password, reason }),
+
+  admins: () => authed<{ admins: AdminRow[]; invitations: unknown[] }>("GET", "/admin/admins"),
+
+  audit: (params: { action?: string; institutionId?: string; before?: string } = {}) =>
+    authed<AuditEntry[]>("GET", `/admin/audit${qs({ ...params, limit: 50 })}`),
 
   createCampus: (name: string) => authed<Campus>("POST", "/admin/campuses", { name }),
 

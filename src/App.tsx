@@ -10,9 +10,20 @@ import { People } from "./pages/People";
 import { PersonPage } from "./pages/PersonPage";
 import { Moderation } from "./pages/Moderation";
 import { Campuses } from "./pages/Campuses";
+import { PlatformOverview } from "./pages/platform/PlatformOverview";
+import { Institutions } from "./pages/platform/Institutions";
+import { Administrators } from "./pages/platform/Administrators";
+import { AuditLog } from "./pages/platform/AuditLog";
+import { Analytics } from "./pages/platform/Analytics";
 
 /**
  * The panel.
+ *
+ * One sign-in, two consoles. Which routes exist at all is decided by the
+ * scope the server reported, and the routing is a convenience rather than a
+ * control: every endpoint behind these screens is refused server-side for
+ * anybody outside that scope, so a platform route reached by typing its URL
+ * renders a page whose every request comes back 403.
  *
  * Who the admin is, and what they may see, is read from the server on every
  * load rather than from anything kept here. An administrator whose access
@@ -44,15 +55,30 @@ export function App() {
           <SignIn onSignedIn={setAdmin} />
         ) : (
           <Shell admin={admin} onSignedOut={() => setAdmin(null)}>
-            <Routes>
-              <Route path="/" element={<Overview admin={admin} />} />
-              <Route path="/verifications" element={<Verification />} />
-              <Route path="/members" element={<People />} />
-              <Route path="/members/:id" element={<PersonPage />} />
-              <Route path="/reports" element={<Moderation />} />
-              <Route path="/campuses" element={<Campuses />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            {admin.scope.kind === "platform" ? (
+              <Routes>
+                <Route path="/" element={<PlatformOverview />} />
+                <Route path="/verifications" element={<Verification />} />
+                <Route path="/reports" element={<Moderation />} />
+                <Route path="/members" element={<People admin={admin} />} />
+                <Route path="/members/:id" element={<PersonPage />} />
+                <Route path="/institutions" element={<Institutions />} />
+                <Route path="/admins" element={<Administrators />} />
+                <Route path="/audit" element={<AuditLog />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            ) : (
+              <Routes>
+                <Route path="/" element={<Overview admin={admin} />} />
+                <Route path="/verifications" element={<Verification />} />
+                <Route path="/members" element={<People admin={admin} />} />
+                <Route path="/members/:id" element={<PersonPage />} />
+                <Route path="/reports" element={<Moderation />} />
+                <Route path="/campuses" element={<Campuses />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            )}
           </Shell>
         )}
       </ToastProvider>

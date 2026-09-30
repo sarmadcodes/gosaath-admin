@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MagnifyingGlassIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import { api } from "../api";
+import { api, type AdminMe } from "../api";
 import { useQuery } from "../data";
 import {
   Avatar,
+  Button,
   Badge,
   BadgeStatus,
   Card,
@@ -37,11 +38,17 @@ const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: "suspended", label: "Suspended" },
 ];
 
-export function People() {
+export function People({ admin }: { admin: AdminMe }) {
+  const platform = admin.scope.kind === "platform";
   const navigate = useNavigate();
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  // Cursor paging. The server returns one page and the id to continue from;
+  // "load everything and slice" stops being survivable somewhere around ten
+  // thousand accounts, and this has to work at a hundred thousand.
+  const [cursors, setCursors] = useState<string[]>([]);
+  const before = cursors[cursors.length - 1];
 
   // Typing is not a request. Without this the server sees one query per
   // keystroke and the list flickers through partial matches.
@@ -53,16 +60,24 @@ export function People() {
   const badgeStatus = filter === "pending" || filter === "approved" ? filter : undefined;
 
   const { data, loading, error, reload } = useQuery(
-    `members:${query}:${badgeStatus ?? ""}`,
-    () => api.members({ ...(query ? { q: query } : {}), ...(badgeStatus ? { badgeStatus } : {}) }),
+    `members:${query}:${badgeStatus ?? ""}:${filter}:${before ?? ""}`,
+    () =>
+      api.members({
+        ...(query ? { q: query } : {}),
+        ...(badgeStatus ? { badgeStatus } : {}),
+        ...(filter === "suspended" ? { suspended: "true" } : {}),
+        ...(before ? { before } : {}),
+      }),
   );
 
-  // Suspension is not a server-side filter, so it is applied here rather than
-  // pretending the server offers it.
-  const members = useMemo(
-    () => (filter === "suspended" ? (data ?? []).filter((m) => m.suspended) : (data ?? [])),
-    [data, filter],
-  );
+  // A new question starts at the first page rather than deep inside the old
+  // one's results.
+  useEffect(() => {
+    setCursors([]);
+  }, [query, filter]);
+
+  const members = useMemo(() => data ?? [], [data]);
+  const pageSize = 30;
 
   return (
     <div className="stack gap-5">
@@ -70,7 +85,9 @@ export function People() {
         <div>
           <h2 className="h1">People</h2>
           <p className="small t-2" style={{ marginTop: 2 }}>
-            Students and staff with a confirmed institution email.
+            {platform
+              ? "Everyone on GoSaath, across every institution."
+              : "Students and staff with a confirmed institution email."}
           </p>
         </div>
         <Input
@@ -88,7 +105,8 @@ export function People() {
         <Segments value={filter} onChange={setFilter} options={FILTERS} />
         {data ? (
           <p className="caption t-3 numeric">
-            {members.length} {members.length === 1 ? "person" : "people"}
+            {cursors.length > 0 ? `Page ${cursors.length + 1} · ` : ""}
+            {members.length} shown
           </p>
         ) : null}
       </div>
@@ -128,6 +146,12 @@ export function People() {
                   <span className="caption t-3 truncate">{member.email}</span>
                 </div>
 
+                {platform ? (
+                  <span className="small t-2 truncate hide-narrow" style={{ width: 150 }}>
+                    {member.institutionName}
+                  </span>
+                ) : null}
+
                 <span className="small t-2 truncate hide-narrow" style={{ width: 140 }}>
                   {member.campusName}
                 </span>
@@ -147,6 +171,33 @@ export function People() {
             ))}
           </div>
         </Card>
+      ) : null}
+
+      {members.length > 0 ? (
+        <div className="between">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={cursors.length === 0}
+            onClick={() => setCursors((current) => current.slice(0, -1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            // A full page means there is probably another one. The server
+            // returns no total, deliberately: counting every matching row on
+            // every keystroke is the expensive half of a search.
+            disabled={members.length < pageSize}
+            onClick={() => {
+              const last = members[members.length - 1];
+              if (last) setCursors((current) => [...current, last.id]);
+            }}
+          >
+            Next
+          </Button>
+        </div>
       ) : null}
     </div>
   );
