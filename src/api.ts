@@ -176,7 +176,11 @@ export type Member = {
   joinedAt: string;
 };
 
+export type Gender = "woman" | "man" | "undisclosed";
+
 export type MemberDetail = Member & {
+  /** Self-declared. Decides access to women-only rides. Detail view only. */
+  gender: Gender;
   commute: {
     intent: string;
     direction: string;
@@ -371,6 +375,8 @@ export const api = {
 
   restoreMember: (id: string) => authed<Member>("POST", `/admin/members/${id}/restore`),
 
+  setGender: (id: string, gender: Gender, reason: string) =>
+    authed<MemberDetail>("POST", `/admin/members/${id}/gender`, { gender, reason }),
   revealPhone: (id: string, reason: string) =>
     authed<{ phone: string }>("POST", `/admin/members/${id}/reveal-phone`, { reason }),
 
