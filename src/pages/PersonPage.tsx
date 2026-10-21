@@ -9,7 +9,7 @@ import {
   ProhibitIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import { api } from "../api";
+import { api, type Gender } from "../api";
 import { invalidate, useQuery } from "../data";
 import {
   Avatar,
@@ -22,6 +22,7 @@ import {
   ErrorState,
   Field,
   InlineError,
+  Segments,
   Skeleton,
   Textarea,
   useToast,
@@ -144,6 +145,7 @@ export function PersonPage() {
                     <Detail label="Campus" value={data.campusName} />
                     <Detail label="Travels from" value={data.areaName} />
                     <Detail label="Joined" value={formatDate(data.joinedAt)} />
+                    <Detail label="Gender" value={GENDER_LABEL[data.gender]} />
                     <Detail
                       label="Reports about them"
                       value={data.reportsAgainst === 0 ? "None" : String(data.reportsAgainst)}
@@ -151,6 +153,12 @@ export function PersonPage() {
                     />
                   </div>
                 </Card>
+                <CorrectGender
+                  memberId={id}
+                  name={data.name}
+                  current={data.gender}
+                  onSaved={reload}
+                />
               </Tabs.Content>
 
               <Tabs.Content value="commute">
@@ -294,6 +302,117 @@ function SuspendAction({
         </Field>
       </Dialog>
     </>
+  );
+}
+
+const GENDER_LABEL: Record<Gender, string> = {
+  woman: "Woman",
+  man: "Man",
+  undisclosed: "Not stated",
+};
+
+/**
+ * Correcting a declared gender.
+ *
+ * It decides who may see and join women-only rides, so a wrong value is a
+ * safety matter. Asked for with a reason and recorded, like revealing a number.
+ */
+function CorrectGender({
+  memberId,
+  name,
+  current,
+  onSaved,
+}: {
+  memberId: string;
+  name: string;
+  current: Gender;
+  onSaved: () => Promise<unknown>;
+}) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [gender, setGender] = useState<Gender>(current);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.setGender(memberId, gender, reason.trim());
+      invalidate("member");
+      await onSaved();
+      setOpen(false);
+      setReason("");
+      toast.show({
+        tone: "success",
+        title: "Gender updated",
+        body: "This has been recorded in the audit log against your name.",
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not do that.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: "var(--space-4)" }}>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setGender(current);
+          setOpen(true);
+        }}
+      >
+        Correct gender
+      </Button>
+
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Correct ${name}'s gender?`}
+        description="Members choose this themselves. It decides who can see and join women-only rides. The change is recorded with your name and reason."
+        footer={
+          <>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={save}
+              loading={busy}
+              disabled={reason.trim().length < 5 || gender === current}
+              variant="primary"
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <Segments<Gender>
+          value={gender}
+          onChange={setGender}
+          options={(Object.keys(GENDER_LABEL) as Gender[]).map((value) => ({
+            value,
+            label: GENDER_LABEL[value],
+          }))}
+        />
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <Field
+            label="Why are you changing it?"
+            htmlFor="gender-reason"
+            hint="For example: the member asked for it to be corrected."
+            {...(error ? { error } : {})}
+          >
+            <Textarea
+              id="gender-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </Field>
+        </div>
+      </Dialog>
+    </div>
   );
 }
 
